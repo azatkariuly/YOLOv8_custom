@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import argparse
 import os
+import torch
 
 class_parameters = {0: ['rim', (0,0,255)], 1: ['backboard', (0,255,0)], 2: ['ball', (255,0,0)], 3: ['score', (255,255,0)]}
 
@@ -80,15 +81,17 @@ class YOLOv8_Model:
 
         return people_boxes, people_keypoints, people_score
 
-
+print('input filename:', input_file)
 cap = cv2.VideoCapture(input_file)
 model = YOLOv8_Model(seg_weight)
 
 vid_writer = None
 
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2)
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2)
 fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+print('video parameters', width, height, fps)
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
@@ -106,6 +109,7 @@ while True:
     if not ret:
         break
 
+    frame = cv2.resize(frame, (width, height), fx=0, fy=0, interpolation = cv2.INTER_CUBIC)
     people_boxes, people_keypoints, people_score = model.detect(frame)
 
     radius = 5
