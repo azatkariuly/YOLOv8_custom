@@ -165,10 +165,11 @@ while True:
             cv2.rectangle(frame, (x, y), (x2, y2), (255, 255, 0), 2)
             cv2.putText(frame, 'trash', (x, y-10), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
 
-            if not (((x-15 < r_x < x2+15) or (x-15 < l_x < x2+15)) and ((r_y + 50 > y) or (l_y + 50 > y))):
-                if trash_assigner > 20:
-                    person_action = 'person left trash'
-                    person_color = (0, 0, 255)
+            if bbox:
+                if not (((x-15 < r_x < x2+15) or (x-15 < l_x < x2+15)) and ((r_y + 50 > y) or (l_y + 50 > y))):
+                    if trash_assigner > 20:
+                        person_action = 'person left trash'
+                        person_color = (0, 0, 255)
 
         if bbox:
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), person_color, 2)
