@@ -139,6 +139,8 @@ while True:
     skeleton = [[16, 14], [14, 12], [17, 15], [15, 13], [12, 13], [6, 12], [7, 13], [6, 7], [6, 8], [7, 9],
                 [8, 10], [9, 11], [2, 3], [1, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 7]]
     limb_color = colors.pose_palette[[9, 9, 9, 9, 7, 7, 7, 0, 0, 0, 0, 0, 16, 16, 16, 16, 16, 16, 16]]
+
+    bbox = None
     for bbox, kpts, s in zip(people_boxes, people_keypoints, people_score):
         nkpt, ndim = kpts.shape
         is_pose = nkpt == 17 and ndim == 3
@@ -148,28 +150,29 @@ while True:
         # cv2.circle(frame, (int(r_x), int(r_y)), radius, (0, 0, 255), -1, lineType=cv2.LINE_AA)
         # cv2.circle(frame, (int(l_x), int(l_y)), radius, (0, 0, 255), -1, lineType=cv2.LINE_AA)
 
-        # for x axis
-        person_action = 'person'
-        person_color = (0, 255, 0)
+    # for x axis
+    person_action = 'person'
+    person_color = (0, 255, 0)
 
-        if len(bboxes) == 0 and trash_assigner > 20:
-            person_action = 'person left trash'
-            person_color = (0, 0, 255)
-        else:
-            for bbox_t, class_id_t, score_t in zip(bboxes, class_ids, scores):
-                trash_assigner += 1
-                # if class_id == 0 or class_id == 26:
-                (x, y, x2, y2) = bbox_t
-                cv2.rectangle(frame, (x, y), (x2, y2), (255, 255, 0), 2)
-                cv2.putText(frame, 'trash', (x, y-10), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
+    if len(bboxes) == 0 and trash_assigner > 20:
+        person_action = 'person left trash'
+        person_color = (0, 0, 255)
+    else:
+        for bbox_t, class_id_t, score_t in zip(bboxes, class_ids, scores):
+            trash_assigner += 1
+            # if class_id == 0 or class_id == 26:
+            (x, y, x2, y2) = bbox_t
+            cv2.rectangle(frame, (x, y), (x2, y2), (255, 255, 0), 2)
+            cv2.putText(frame, 'trash', (x, y-10), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
 
-                if not (((x-15 < r_x < x2+15) or (x-15 < l_x < x2+15)) and ((r_y + 50 > y) or (l_y + 50 > y))):
-                    if trash_assigner > 20:
-                        person_action = 'person left trash'
-                        person_color = (0, 0, 255)
+            if not (((x-15 < r_x < x2+15) or (x-15 < l_x < x2+15)) and ((r_y + 50 > y) or (l_y + 50 > y))):
+                if trash_assigner > 20:
+                    person_action = 'person left trash'
+                    person_color = (0, 0, 255)
 
-        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), person_color, 2)
-        cv2.putText(frame, person_action, (bbox[0], bbox[1]-10), cv2.FONT_HERSHEY_PLAIN, 2, person_color, 2)
+        if bbox:
+            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), person_color, 2)
+            cv2.putText(frame, person_action, (bbox[0], bbox[1]-10), cv2.FONT_HERSHEY_PLAIN, 2, person_color, 2)
 
     # cv2.imshow('im', frame)
     vid_writer.write(frame)
