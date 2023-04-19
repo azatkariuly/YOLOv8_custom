@@ -22,7 +22,7 @@ input_file = args.video
 output_file = args.output
 save_dir = args.save
 temp_weight = 'best_temp.pt'
-det_weight = 'yolov8n-pose.pt'
+det_weight = 'yolov8m-pose.pt'
 alpha = 0.5 # transparency parameter
 
 class Colors:
@@ -69,7 +69,7 @@ class YOLOv8_Temp:
         return bboxes, class_ids, scores
 
 class YOLOv8_Model:
-    def __init__(self, model_path, alpha=0.5, conf=0.35):
+    def __init__(self, model_path, alpha=0.5, conf=0.5):
         self.model = YOLO(model_path)
         self.alpha = alpha
         self.conf = conf
@@ -105,8 +105,8 @@ model_temp = YOLOv8_Temp(temp_weight)
 
 vid_writer = None
 
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2)
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2)
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -119,6 +119,13 @@ it = 0
 
 
 trash_assigner = 0
+total_people = 0
+current_people = 0
+door_checker = False
+
+door_color = {0: (0, 255, 0), 1: (255, 0, 0)}
+person_text = 'person'
+
 while True:
     print(it, '/', total_frames)
     it += 1
@@ -127,55 +134,36 @@ while True:
     if not ret:
         break
 
+    frame = cv2.resize(frame, (width, height), fx=0, fy=0, interpolation = cv2.INTER_CUBIC)
     bboxes, class_ids, scores = model_temp.detect(frame)
-
     people_boxes, people_keypoints, people_score = model.detect(frame)
 
-    radius = 5
-    shape=(640, 640)
-    kpt_color = colors.pose_palette[[16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 9, 9, 9, 9, 9, 9]]
+    if len(bboxes)>0:
+        (dx, dy, dx2, dy2) = bboxes[0]
 
-    # Pose
-    skeleton = [[16, 14], [14, 12], [17, 15], [15, 13], [12, 13], [6, 12], [7, 13], [6, 7], [6, 8], [7, 9],
-                [8, 10], [9, 11], [2, 3], [1, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 7]]
-    limb_color = colors.pose_palette[[9, 9, 9, 9, 7, 7, 7, 0, 0, 0, 0, 0, 16, 16, 16, 16, 16, 16, 16]]
+    if current_people != len(people_boxes) and door_checker:
+        total_people += 1
+        if total_people > 1:
+            person_text = 'people'
+
+    current_people = len(people_boxes)
+    door_checker = False
 
     for bbox, kpts, s in zip(people_boxes, people_keypoints, people_score):
-        nkpt, ndim = kpts.shape
-        is_pose = nkpt == 17 and ndim == 3
+        (x, y, x2, y2) = bbox
+        # kpt_line &= is_pose
 
-        (px, py, px2, py2) = bbox
-        (r_x, r_y, r_s), (l_x, l_y, l_s) = kpts[9], kpts[10]
-        # cv2.circle(frame, (int(r_x), int(r_y)), radius, (0, 0, 255), -1, lineType=cv2.LINE_AA)
-        # cv2.circle(frame, (int(l_x), int(l_y)), radius, (0, 0, 255), -1, lineType=cv2.LINE_AA)
+        if dx < x < dx2 and dy < y < dy2:
+            door_checker = True
 
-    # for x axis
-    person_action = 'person'
-    person_color = (0, 255, 0)
+        cv2.rectangle(frame, (x, y), (x2, y2), (0,255,255), 2)
+        cv2.putText(frame, 'person', (x, y-10), cv2.FONT_HERSHEY_PLAIN, 2, (0,255,255), 2)
 
-    if len(bboxes) == 0 and trash_assigner > 20:
-        person_action = 'person left trash'
-        person_color = (0, 0, 255)
-    else:
-        for bbox_t, class_id_t, score_t in zip(bboxes, class_ids, scores):
-            trash_assigner += 1
-            # if class_id == 0 or class_id == 26:
-            (x, y, x2, y2) = bbox_t
-            cv2.rectangle(frame, (x, y), (x2, y2), (255, 255, 0), 2)
-            cv2.putText(frame, 'trash', (x, y-10), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
-
-            if len(people_boxes) > 0:
-                if not (((x-15 < r_x < x2+15) or (x-15 < l_x < x2+15)) and ((r_y + 50 > y) or (l_y + 50 > y))):
-                    if trash_assigner > 20:
-                        person_action = 'person left trash'
-                        person_color = (0, 0, 255)
-
-    if len(people_boxes) > 0:
-        cv2.rectangle(frame, (px, py), (px2, py2), person_color, 2)
-        cv2.putText(frame, person_action, (bbox[0], bbox[1]-10), cv2.FONT_HERSHEY_PLAIN, 2, person_color, 2)
-
-    # cv2.imshow('im', frame)
-    vid_writer.write(frame)
+    cv2.rectangle(frame, (dx, dy), (dx2, dy2), door_color[total_people%2], 2)
+    cv2.putText(frame, 'target', (dx, dy-10), cv2.FONT_HERSHEY_PLAIN, 2, door_color[total_people%2], 2)
+    cv2.putText(frame, str(total_people) + ' ' + person_text + ' entered', (40, 40), cv2.FONT_HERSHEY_PLAIN, 2, door_color[total_people%2], 2)
+    cv2.imshow('im', frame)
+    # vid_writer.write(frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
