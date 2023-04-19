@@ -144,7 +144,7 @@ while True:
         nkpt, ndim = kpts.shape
         is_pose = nkpt == 17 and ndim == 3
 
-		(px, py, px2, py2) = bbox
+        (px, py, px2, py2) = bbox
         (r_x, r_y, r_s), (l_x, l_y, l_s) = kpts[9], kpts[10]
         # cv2.circle(frame, (int(r_x), int(r_y)), radius, (0, 0, 255), -1, lineType=cv2.LINE_AA)
         # cv2.circle(frame, (int(l_x), int(l_y)), radius, (0, 0, 255), -1, lineType=cv2.LINE_AA)
