@@ -200,7 +200,7 @@ while True:
     # frame, ball_position = model_det.detect(frame)
     # frame = model_seg.detect(frame, ball_position)
 
-    # cv2.imshow('image', frame)
+    cv2.imshow('image', frame)
     # out.write(frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
