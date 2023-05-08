@@ -22,7 +22,8 @@ input_file = args.video
 output_video_path = args.output
 save_dir = args.save
 det_weight = 'best.pt'
-seg_weight = 'yolov8n-seg.pt'
+# seg_weight = 'yolov8m-seg.pt'
+person_weight = 'yolov8m.pt'
 alpha = 0.5 # transparency parameter
 
 class YOLOv8_Detection:
@@ -81,21 +82,21 @@ class YOLOv8_Segmentation:
         bboxes, class_ids, scores = [], [], []
 
         if result:
-            for seg in result.masks.xyn:
-                seg[:, 0] *= width
-                seg[:, 1] *= height
-                segment = np.array(seg, dtype=np.int32)
-                segmentation_contours_idx.append(segment)
+            # for seg in result.masks.xyn:
+            #     seg[:, 0] *= width
+            #     seg[:, 1] *= height
+            #     segment = np.array(seg, dtype=np.int32)
+            #     segmentation_contours_idx.append(segment)
 
             bboxes = np.array(result.boxes.xyxy.cpu(), dtype='int')
             class_ids = np.array(result.boxes.cls.cpu(), dtype='int')
             scores = np.array(result.boxes.conf.cpu(), dtype='float').round(2)
 
         people_boxes, people_seg, people_score = [], [], []
-        for bbox, class_id, seg, score in zip(bboxes, class_ids, segmentation_contours_idx, scores):
+        for bbox, class_id, score in zip(bboxes, class_ids, scores):
             if class_id == 0:
                 people_boxes.append(bbox)
-                people_seg.append(seg)
+                # people_seg.append(seg)
                 people_score.append(score)
 
         return people_boxes, people_seg, people_score
@@ -125,7 +126,7 @@ def detect_last_person(people, ball):
 
 cap = cv2.VideoCapture(input_file)
 model_det = YOLOv8_Detection(det_weight, class_parameters)
-model_seg = YOLOv8_Segmentation(seg_weight)
+model_seg = YOLOv8_Segmentation(person_weight)
 
 frame_queue = []
 vid_writer = None
