@@ -196,26 +196,32 @@ while True:
     else:
         score_validation = 0
 
-        (ball_x, ball_y, ball_x2, ball_y2) = ball_position
-        (basket_x, basket_y, basket_x2, basket_y2) = basket_position
+        if len(ball_position) > 0 and len(basket_position) > 0:
+            (ball_x, ball_y, ball_x2, ball_y2) = ball_position
+            (basket_x, basket_y, basket_x2, basket_y2) = basket_position
 
-        if (ball_y2 - 10 <= basket_y < ball_y2 + 10) and (ball_x2 + 10 > basket_x or basket_x <= ball_x < basket_x2 or basket_x2 + 10 > ball_x):
-            try_validation += 1
+            if (ball_y2 - 10 <= basket_y < ball_y2 + 10) and (ball_x2 + 10 > basket_x or basket_x <= ball_x < basket_x2 or basket_x2 + 10 > ball_x):
+                try_validation += 1
 
-            if try_validation >= try_detection_threshold and vid_writer_forward == 0:
-                if vid_writer is not None:
-                    vid_writer.release()
+                if try_validation >= try_detection_threshold and vid_writer_forward == 0:
+                    if vid_writer is not None:
+                        vid_writer.release()
 
-                try_vid_writer_counter += 1
-                vid_writer = cv2.VideoWriter(os.path.join(save_dir, 'try_' + str(try_vid_writer_counter) + '.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+                    try_vid_writer_counter += 1
+                    vid_writer = cv2.VideoWriter(os.path.join(save_dir, 'try_' + str(try_vid_writer_counter) + '.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
 
-                cv2.imwrite(os.path.join(save_dir, 'try_' + str(try_vid_writer_counter) + '.jpg'), last_person)
+                    cv2.imwrite(os.path.join(save_dir, 'try_' + str(try_vid_writer_counter) + '.jpg'), last_person)
 
-                # write from queue buffer
-                for k in frame_queue:
-                    vid_writer.write(k)
+                    # write from queue buffer
+                    for k in frame_queue:
+                        vid_writer.write(k)
 
-                vid_writer_forward = fps*seconds_forward
+                    vid_writer_forward = fps*seconds_forward
+            else:
+                try_validation = 0
+
+        else:
+            try_validation = 0
 
 
 
