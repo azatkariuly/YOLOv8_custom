@@ -37,17 +37,8 @@ class YOLOv8_Detection:
 
         result = self.model.predict(conf=self.conf, source=img, save=False, save_txt=False)[0]
 
-        # #later might be needed for segmentation
-        # segmentation_contours_idx = []
-        # if result.masks:
-        #     for seg in result.masks.xyn:
-        #         seg[:, 0] *= width
-        #         seg[:, 1] *= height
-        #         segment = np.array(seg, dtype=np.int32)
-        #         segmentation_contours_idx.append(segment)
-
         bboxes, class_ids, scores = [], [], []
-        ball_position = []
+        ball_position, basket_position = [], []
         bboxes = np.array(result.boxes.xyxy.cpu(), dtype='int')
         class_ids = np.array(result.boxes.cls.cpu(), dtype='int')
         scores = np.array(result.boxes.conf.cpu(), dtype='float').round(2)
@@ -59,13 +50,14 @@ class YOLOv8_Detection:
             cv2.rectangle(img, (x,y), (x2,y2), self.cl_pr[class_id][1], 2)
             cv2.putText(img, self.cl_pr[class_id][0], (x, y-10), cv2.FONT_HERSHEY_PLAIN, 2, self.cl_pr[class_id][1], 2)
 
+            if class_id == 1:
+                basket_position = bbox
             if class_id == 2:
                 ball_position = bbox
-
             if class_id == 3:
                 has_score = True
 
-        return img, ball_position, has_score
+        return img, ball_position, has_score, basket_position
 
 class YOLOv8_Segmentation:
     def __init__(self, model_path, alpha=0.5, conf=0.35):
@@ -131,13 +123,18 @@ model_seg = YOLOv8_Segmentation(person_weight)
 frame_queue = []
 vid_writer = None
 vid_writer_forward = 0
-vid_writer_counter = 0
+
+score_vid_writer_counter = 0
+try_vid_writer_counter = 0
 
 seconds_forward = 2
 seconds_back = 2
 
 score_validation = 0
 score_detection_threshold = 5
+
+try_validation = 0
+try_detection_threshold = 5
 
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -158,7 +155,7 @@ while True:
     if not ret:
         break
 
-    frame, ball_position, has_score = model_det.detect(frame)
+    frame, ball_position, has_score, basket_position = model_det.detect(frame)
     people_boxes, people_seg, people_score = model_seg.detect(frame)
 
     last_person_frame = detect_last_person(people_boxes, ball_position)
@@ -186,10 +183,10 @@ while True:
             if vid_writer is not None:
                 vid_writer.release()
 
-            vid_writer_counter += 1
-            vid_writer = cv2.VideoWriter(os.path.join(save_dir, str(vid_writer_counter) + '.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+            score_vid_writer_counter += 1
+            vid_writer = cv2.VideoWriter(os.path.join(save_dir, 'score_' + str(score_vid_writer_counter) + '.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
 
-            cv2.imwrite(os.path.join(save_dir, str(vid_writer_counter) + '.jpg'), last_person)
+            cv2.imwrite(os.path.join(save_dir, 'score_' + str(score_vid_writer_counter) + '.jpg'), last_person)
 
             # write from queue buffer
             for k in frame_queue:
@@ -198,14 +195,38 @@ while True:
             vid_writer_forward = fps*seconds_forward
     else:
         score_validation = 0
+
+        (ball_x, ball_y, ball_x2, ball_y2) = ball_position
+        (basket_x, basket_y, basket_x2, basket_y2) = basket_position
+
+        if (ball_y2 - 10 <= basket_y < ball_y2 + 10) and (ball_x2 + 10 > basket_x or basket_x <= ball_x < basket_x2 or basket_x2 + 10 > ball_x):
+            try_validation += 1
+
+            if try_validation >= try_detection_threshold and vid_writer_forward == 0:
+                if vid_writer is not None:
+                    vid_writer.release()
+
+                try_vid_writer_counter += 1
+                vid_writer = cv2.VideoWriter(os.path.join(save_dir, 'try_' + str(try_vid_writer_counter) + '.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+
+                cv2.imwrite(os.path.join(save_dir, 'try_' + str(try_vid_writer_counter) + '.jpg'), last_person)
+
+                # write from queue buffer
+                for k in frame_queue:
+                    vid_writer.write(k)
+
+                vid_writer_forward = fps*seconds_forward
+
+
+
     # frame, ball_position = model_det.detect(frame)
     # frame = model_seg.detect(frame, ball_position)
 
-    cv2.imshow('image', frame)
-    # out.write(frame)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    # cv2.imshow('image', frame)
+    # # out.write(frame)
+    #
+    # if cv2.waitKey(1) & 0xFF == ord('q'):
+    #     break
 
 cap.release()
 
