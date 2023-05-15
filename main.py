@@ -201,11 +201,11 @@ while True:
     # frame, ball_position = model_det.detect(frame)
     # frame = model_seg.detect(frame, ball_position)
 
-    cv2.imshow('image', frame)
-    # out.write(frame)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    # cv2.imshow('image', frame)
+    # # out.write(frame)
+	#
+    # if cv2.waitKey(1) & 0xFF == ord('q'):
+    #     break
 
 cap.release()
 
@@ -213,4 +213,4 @@ if vid_writer is not None:
 	vid_writer.release()
 
 # Close all OpenCV windows
-cv2.destroyAllWindows()
+# cv2.destroyAllWindows()
